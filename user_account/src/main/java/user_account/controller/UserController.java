@@ -22,7 +22,7 @@ public class UserController {
     public User createUser(
         @RequestBody NewUserDto newUserDto
     ) {
-        return userRepository.createUser(newUserDto.name());
+        return userRepository.createUser(newUserDto.getName());
     }
 
     // 2. Добавить денежные средства на счет пользователя

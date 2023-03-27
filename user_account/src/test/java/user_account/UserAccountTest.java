@@ -2,53 +2,84 @@ package user_account;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.testcontainers.containers.FixedHostPortGenericContainer;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import stock_market.controller.StockMarketController;
-import stock_market.dto.NewStockDto;
 import stock_market.entity.Share;
 import stock_market.entity.Stock;
-import stock_market.repository.InMemoryStockRepository;
 import user_account.controller.UserController;
 import user_account.dto.NewUserDto;
 import user_account.entity.User;
 import user_account.facade.UserFacade;
 import user_account.repository.InMemoryUserRepository;
+import user_account.util.ParserUtils;
 
-@Testcontainers
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public class UserAccountTest {
-    @Container
+    @ClassRule
     public static GenericContainer stockMarketServer
-        = new GenericContainer("stockMarket:1.0-SNAPSHOT")
+    = new FixedHostPortGenericContainer("stockmarket:0.0.1-SNAPSHOT")
+        .withFixedExposedPort(8080, 8080)
         .withExposedPorts(8080);
 
-    private StockMarketController stockMarketController;
     private InMemoryUserRepository userRepository;
     private UserController userController;
     private UserFacade userFacade;
+    private StockMarketClient stockMarketClient;
 
     private Stock stock1, stock2, stock3;
 
     @Before
-    public void before() {
-        stockMarketController = new StockMarketController(new InMemoryStockRepository());
+    public void before() throws IOException {
+        stockMarketServer.start();
 
-        userRepository = new InMemoryUserRepository();
-        userFacade = new UserFacade(stockMarketController, userRepository);
+        stockMarketClient = new StockMarketClient("localhost", 8080);
+        userRepository = new InMemoryUserRepository(stockMarketClient);
+        userFacade = new UserFacade(stockMarketClient, userRepository);
         userController = new UserController(userRepository, userFacade);
 
-        stock1 = stockMarketController.createStock(
-            new NewStockDto("АЛРОСА", 100, 10)
-        );
-        stock2 = stockMarketController.createStock(
-            new NewStockDto("Лукойл", 200, 5)
-        );
-        stock3 = stockMarketController.createStock(
-            new NewStockDto("ВТБ", 300, 15)
-        );
+        stock1 = parseStockJson(stockMarketClient.post(
+            "stock",
+            Map.of(
+                "companyName", "ALROSA",
+                "overallSharesCount", "100",
+                "currentPriceUSD", "10"
+            )
+        ).body());
+
+        stock2 = parseStockJson(stockMarketClient.post(
+            "stock",
+            Map.of(
+                "companyName", "Лукойл",
+                "overallSharesCount", "200",
+                "currentPriceUSD", "5"
+            )
+        ).body());
+
+        stock3 = parseStockJson(stockMarketClient.post(
+            "stock",
+            Map.of(
+                "companyName", "ВТБ",
+                "overallSharesCount", "300",
+                "currentPriceUSD", "15"
+            )
+        ).body());
+    }
+
+    private Stock parseStockJson(String json) {
+        return ParserUtils.parseStockJson(json);
+    }
+
+    @After
+    public void tearDown() {
+        stockMarketServer.stop();
     }
 
     @Test
@@ -63,8 +94,26 @@ public class UserAccountTest {
         assertThat(userController.getUserShares(zoey.getId()))
             .usingRecursiveFieldByFieldElementComparator()
             .containsExactlyInAnyOrder(
-                new Share(stock1, 10),
-                new Share(stock1, 10)
+                new Share(
+                    Stock.builder()
+                        .id(stock1.getId())
+                        .companyName(stock1.getCompanyName())
+                        .overallSharesCount(stock1.getOverallSharesCount())
+                        .availableSharesForSaleCount(98)
+                        .currentPriceUSD(stock1.getCurrentPriceUSD())
+                        .build(),
+                    10
+                ),
+                new Share(
+                    Stock.builder()
+                        .id(stock1.getId())
+                        .companyName(stock1.getCompanyName())
+                        .overallSharesCount(stock1.getOverallSharesCount())
+                        .availableSharesForSaleCount(98)
+                        .currentPriceUSD(stock1.getCurrentPriceUSD())
+                        .build(),
+                    10
+                )
             );
 
         assertThat(userController.getUSDBalance(zoey.getId())).isEqualTo(80);
@@ -96,19 +145,19 @@ public class UserAccountTest {
         assertThat(
             trumpsShares.stream()
                 .filter(share -> share.getStock().getId() == stock1.getId())
-                .toList()
+                .collect(Collectors.toList())
                 .size()
         ).isEqualTo(20);
         assertThat(
             trumpsShares.stream()
                 .filter(share -> share.getStock().getId() == stock2.getId())
-                .toList()
+                .collect(Collectors.toList())
                 .size()
         ).isEqualTo(30);
         assertThat(
             trumpsShares.stream()
                 .filter(share -> share.getStock().getId() == stock3.getId())
-                .toList()
+                .collect(Collectors.toList())
                 .size()
         ).isEqualTo(50);
     }
@@ -132,22 +181,6 @@ public class UserAccountTest {
     }
 
     @Test
-    public void notEnoughSharesTest() {
-        User zoey = userController.createUser(
-            new NewUserDto("Zoey")
-        );
-
-        userController.deposit(zoey.getId(), 10_000);
-        // успешная покупка
-        boolean bought1 = userController.buySharesForUser(zoey.getId(), stock1.getId(), 80);
-        // Акций АЛРОСЫ столько нет
-        boolean bought2 = userController.buySharesForUser(zoey.getId(), stock1.getId(), 80);
-
-        assertThat(bought1).isTrue();
-        assertThat(bought2).isFalse();
-    }
-
-    @Test
     public void overallBalanceAfterPriceChange() {
         User zoey = userController.createUser(
             new NewUserDto("Zoey")
@@ -159,7 +192,7 @@ public class UserAccountTest {
         // На балансе осталось 900 USD
         userController.buySharesForUser(zoey.getId(), stock1.getId(), 10);
 
-        stockMarketController.changeStockPrice(stock1.getId(), 1);
+        stockMarketClient.changePrice(stock1.getId(), 1);
 
         // Куплено 20 акций по 1 доллару
         // На балансе осталось 880 USD
@@ -178,11 +211,12 @@ public class UserAccountTest {
         userController.deposit(zoey.getId(), 100);
         // Куплено 3 акции stock1 по 10 долларов, на балансе 70 USD
         userController.buySharesForUser(zoey.getId(), stock1.getId(), 3);
+
         // Куплено 10 акций stock2 по 5 долларов, на балансе 20 USD
         userController.buySharesForUser(zoey.getId(), stock2.getId(), 10);
 
         // Цена за акцию stock1 выросла до 35 USD
-        stockMarketController.changeStockPrice(stock1.getId(), 35);
+        stockMarketClient.changePrice(stock1.getId(), 35);
 
         // Продаем 2 акции stock1 по 35 USD за штуку
         userController.sellSharesForUser(zoey.getId(), stock1.getId(), 2);

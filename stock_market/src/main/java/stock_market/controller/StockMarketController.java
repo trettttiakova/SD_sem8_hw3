@@ -1,28 +1,29 @@
 package stock_market.controller;
 
-import lombok.AllArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import stock_market.dto.NewStockDto;
 import stock_market.entity.Share;
 import stock_market.entity.Stock;
+import stock_market.repository.InMemoryStockRepository;
 import stock_market.repository.StockRepository;
 
 import java.util.Collection;
 
 @RestController
-@AllArgsConstructor
+// P.S.: по-хорошему здесь надо передавать DTO, но для простоты передаю Stock и Share
 public class StockMarketController {
-    private final StockRepository stockRepository;
+    private final StockRepository stockRepository = new InMemoryStockRepository();
 
     // 1. Добавить новую компанию и ее акции
-    @PostMapping("stock")
-    public Stock createStock(
+    @PostMapping(value = "stock", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public long createStock(
         @RequestBody NewStockDto newStockDto
     ) {
         return stockRepository.createNewStock(
-            newStockDto.companyName(),
-            newStockDto.overallSharesCount(),
-            newStockDto.currentPriceUSD()
+            newStockDto.getCompanyName(),
+            newStockDto.getOverallSharesCount(),
+            newStockDto.getCurrentPriceUSD()
         );
     }
 

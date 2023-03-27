@@ -8,7 +8,7 @@ import java.util.Collection;
 
 @Repository
 public interface StockRepository {
-    Stock createNewStock(String companyName, int currentPriceUSD, int overallSharesCount);
+    long createNewStock(String companyName, int currentPriceUSD, int overallSharesCount);
 
     Stock getById(long id);
 

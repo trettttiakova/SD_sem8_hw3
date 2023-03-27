@@ -1,3 +1,8 @@
 package user_account.dto;
 
-public record NewUserDto(String name) {}
+import lombok.Data;
+
+@Data
+public class NewUserDto {
+    private final String name;
+}

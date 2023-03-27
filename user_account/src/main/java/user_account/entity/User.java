@@ -3,10 +3,12 @@ package user_account.entity;
 import lombok.Data;
 import stock_market.entity.Share;
 import stock_market.entity.Stock;
+import user_account.StockMarketClient;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 public class User {
@@ -31,9 +33,14 @@ public class User {
         return this.shares;
     }
 
-    public int getOverallBalanceUSD() {
+    public int getOverallBalanceUSD(StockMarketClient client) {
         return this.balanceUSD + this.shares.stream()
-            .map(share -> share.getStock().getCurrentPriceUSD())
+            .map(
+                share -> {
+                    long stockId = share.getStock().getId();
+                    return client.getStock(stockId).getCurrentPriceUSD();
+                }
+            )
             .mapToInt(Integer::intValue)
             .sum();
     }
@@ -51,22 +58,18 @@ public class User {
         this.shares.addAll(boughtShares);
     }
 
-    public Integer sellShares(long stockId, int count) {
+    public Integer sellShares(long stockId, int count, StockMarketClient client) {
         List<Share> stockShares = this.getShares().stream()
             .filter(share -> share.getStock().getId() == stockId)
-            .toList();
+            .collect(Collectors.toList());
         if (stockShares.size() < count) { // Недостаточно акций для продажи
             return null;
         }
-        int fixedPrice = stockShares.stream()
-            .findFirst()
-            .get()
-            .getStock()
-            .getCurrentPriceUSD();
+        Stock stock = client.getStock(stockId);
+        int fixedPrice = stock.getCurrentPriceUSD();
         for (int i = 0; i < count; i++) {
             this.shares.remove(stockShares.get(i));
         }
-
 
         int soldAmount = fixedPrice * count;
         this.deposit(soldAmount);

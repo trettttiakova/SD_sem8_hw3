@@ -1,5 +1,7 @@
 package stock_market.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -7,6 +9,8 @@ import java.util.Collection;
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
 public class Stock {
     private final long id;
 

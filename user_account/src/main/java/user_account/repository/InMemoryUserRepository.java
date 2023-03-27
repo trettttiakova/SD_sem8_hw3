@@ -2,6 +2,7 @@ package user_account.repository;
 
 import org.springframework.stereotype.Repository;
 import stock_market.entity.Share;
+import user_account.StockMarketClient;
 import user_account.entity.User;
 
 import java.util.ArrayList;
@@ -11,6 +12,11 @@ import java.util.List;
 @Repository
 public class InMemoryUserRepository implements UserRepository {
     private final List<User> users = new ArrayList<>();
+    private final StockMarketClient client;
+
+    public InMemoryUserRepository(StockMarketClient client) {
+        this.client = client;
+    }
 
     @Override
     public User getById(long id) {
@@ -41,7 +47,7 @@ public class InMemoryUserRepository implements UserRepository {
 
     @Override
     public int getUserOverallBalanceUSD(long id) {
-        return getById(id).getOverallBalanceUSD();
+        return getById(id).getOverallBalanceUSD(client);
     }
 
     @Override

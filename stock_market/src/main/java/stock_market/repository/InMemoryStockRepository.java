@@ -13,11 +13,12 @@ public class InMemoryStockRepository implements StockRepository {
     private final List<Stock> stocks = new ArrayList<>();
 
     @Override
-    public Stock createNewStock(String companyName, int currentPriceUSD, int overallSharesCount) {
-        Stock newStock = new Stock(stocks.size(), companyName, currentPriceUSD, overallSharesCount);
+    public long createNewStock(String companyName, int currentPriceUSD, int overallSharesCount) {
+        long id = stocks.size();
+        Stock newStock = new Stock(id, companyName, currentPriceUSD, overallSharesCount);
         this.stocks.add(newStock);
 
-        return newStock;
+        return id;
     }
 
     @Override

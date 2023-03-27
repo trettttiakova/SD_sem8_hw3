@@ -1,3 +1,10 @@
 package stock_market.dto;
 
-public record NewStockDto(String companyName, int overallSharesCount, int currentPriceUSD) {}
+import lombok.Data;
+
+@Data
+public class NewStockDto {
+    private final String companyName;
+    private final int overallSharesCount;
+    private final int currentPriceUSD;
+}
