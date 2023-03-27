@@ -55,8 +55,11 @@ public class Stock {
         return boughtShares;
     }
 
+    public void sellShares(int count) {
+        this.availableSharesForSaleCount += count;
+    }
+
     public void changePrice(int newPriceUSD) {
         this.currentPriceUSD = newPriceUSD;
-
     }
 }

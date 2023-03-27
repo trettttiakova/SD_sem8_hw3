@@ -40,4 +40,9 @@ public class InMemoryStockRepository implements StockRepository {
         stock.changePrice(newPrice);
     }
 
+    @Override
+    public void sellShares(long stockId, int count) {
+        getById(stockId).sellShares(count);
+    }
+
 }

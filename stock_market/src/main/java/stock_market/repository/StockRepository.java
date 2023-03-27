@@ -15,4 +15,6 @@ public interface StockRepository {
     Collection<Share> buyShares(long stockId, int count, int maxPrice);
 
     void changePrice(long stockId, int newPrice);
+
+    void sellShares(long stockId, int count);
 }

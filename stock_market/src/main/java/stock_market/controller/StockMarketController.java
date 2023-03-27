@@ -51,4 +51,12 @@ public class StockMarketController {
     ) {
         stockRepository.changePrice(stockId, newPrice);
     }
+
+    @RequestMapping("stocks/{id}/sell/{count}")
+    public void sellShares(
+        @PathVariable("id") long stockId,
+        @PathVariable("count") int count
+    ) {
+        stockRepository.sellShares(stockId, count);
+    }
 }

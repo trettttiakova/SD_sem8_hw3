@@ -2,6 +2,7 @@ package user_account.entity;
 
 import lombok.Data;
 import stock_market.entity.Share;
+import stock_market.entity.Stock;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,6 +66,7 @@ public class User {
         for (int i = 0; i < count; i++) {
             this.shares.remove(stockShares.get(i));
         }
+
 
         int soldAmount = fixedPrice * count;
         this.deposit(soldAmount);
